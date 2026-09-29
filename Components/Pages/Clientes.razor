@@ -1,0 +1,344 @@
+@page "/clientes"
+@using WebEmpresa.Models
+@using WebEmpresa.Services
+@inject ClienteService ClienteService
+@inject IJSRuntime JS
+@rendermode InteractiveServer
+
+<PageTitle>Clientes - WebEmpresa</PageTitle>
+
+<div class="container-fluid px-4 py-4">
+    <!-- Header Principal -->
+    <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-3">
+        <div>
+            <h2 class="fw-bold text-dark mb-1 d-flex align-items-center">
+                <i class="bi bi-people-fill text-primary me-2"></i>Gestión de Clientes
+            </h2>
+            <p class="text-muted mb-0 small">Administra los registros de clientes sincronizados con tu API.</p>
+        </div>
+        <button class="btn btn-primary px-4 py-2 rounded-3 shadow-sm fw-semibold d-flex align-items-center gap-2" @onclick="AbrirModalCrear">
+            <i class="bi bi-person-plus-fill fs-5"></i>
+            <span>Nuevo Cliente</span>
+        </button>
+    </div>
+
+    <!-- Tarjetas de Métricas Rápidas -->
+    <div class="row g-3 mb-4">
+        <div class="col-md-4">
+            <div class="card border-0 shadow-sm rounded-4 bg-white p-3 d-flex flex-row align-items-center">
+                <div class="rounded-3 bg-primary bg-opacity-10 text-primary p-3 me-3">
+                    <i class="bi bi-person-vcard fs-3"></i>
+                </div>
+                <div>
+                    <span class="text-muted small fw-semibold">Total Registrados</span>
+                    <h4 class="fw-bold mb-0 text-dark">@(clientes?.Count ?? 0)</h4>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card border-0 shadow-sm rounded-4 bg-white p-3 d-flex flex-row align-items-center">
+                <div class="rounded-3 bg-success bg-opacity-10 text-success p-3 me-3">
+                    <i class="bi bi-check-circle fs-3"></i>
+                </div>
+                <div>
+                    <span class="text-muted small fw-semibold">Estado API</span>
+                    <h4 class="fw-bold mb-0 text-success fs-6">Conectado (v2)</h4>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card border-0 shadow-sm rounded-4 bg-white p-3 d-flex flex-row align-items-center">
+                <div class="rounded-3 bg-info bg-opacity-10 text-info p-3 me-3">
+                    <i class="bi bi-search fs-3"></i>
+                </div>
+                <div>
+                    <span class="text-muted small fw-semibold">Filtro Activo</span>
+                    <h4 class="fw-bold mb-0 text-dark fs-6">@(string.IsNullOrWhiteSpace(criterioBusqueda) ? "Todos los registros" : "Filtrado")</h4>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Sección de Tabla con Buscador Integrado -->
+    <div class="card border-0 shadow-sm rounded-4 overflow-hidden bg-white">
+        <!-- Barra Superior de la Tabla -->
+        <div class="card-header bg-white border-0 p-3 d-flex justify-content-between align-items-center flex-wrap gap-2">
+            <div class="input-group" style="max-width: 350px;">
+                <span class="input-group-text bg-light border-end-0 rounded-start-3 text-muted">
+                    <i class="bi bi-search"></i>
+                </span>
+                <input type="text" class="form-control bg-light border-start-0 rounded-end-3" 
+                       placeholder="Buscar por CUI, NIT o nombre..." 
+                       @bind="criterioBusqueda" @bind:event="oninput" />
+            </div>
+            <span class="text-muted small">Mostrando <strong>@ClientesFiltrados.Count()</strong> registros</span>
+        </div>
+
+        <!-- Tabla -->
+        @if (clientes == null)
+        {
+            <div class="p-5 text-center">
+                <div class="spinner-border text-primary mx-auto mb-3" role="status"></div>
+                <p class="text-muted mb-0">Cargando la lista de clientes...</p>
+            </div>
+        }
+        else if (!ClientesFiltrados.Any())
+        {
+            <div class="p-5 text-center">
+                <i class="bi bi-person-exclamation text-muted display-4 mb-2 d-block"></i>
+                <h6 class="fw-bold text-secondary">No se encontraron clientes</h6>
+                <p class="text-muted small mb-0">Intenta modificar el término de búsqueda o agrega un nuevo cliente.</p>
+            </div>
+        }
+        else
+        {
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0">
+                    <thead class="bg-light text-secondary text-uppercase small fw-bold">
+                        <tr>
+                            <th class="ps-4 py-3">ID</th>
+                            <th>CUI / NIT</th>
+                            <th>Cliente</th>
+                            <th>Teléfono</th>
+                            <th>Dirección</th>
+                            <th>Fecha Nac.</th>
+                            <th class="text-end pe-4">Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody class="border-top-0">
+                        @foreach (var cliente in ClientesFiltrados)
+                        {
+                            <tr>
+                                <td class="ps-4">
+                                    <span class="badge bg-secondary bg-opacity-10 text-dark font-monospace px-2 py-1">#@cliente.Id_cliente</span>
+                                </td>
+                                <td>
+                                    <div class="fw-semibold text-dark mb-0">@cliente.cui</div>
+                                    <div class="text-muted small">NIT: @cliente.nit</div>
+                                </td>
+                                <td>
+                                    <div class="d-flex align-items-center">
+                                        <div class="rounded-circle bg-primary bg-opacity-10 text-primary d-flex align-items-center justify-content-center me-3 fw-bold" style="width: 38px; height: 38px;">
+                                            @(string.IsNullOrEmpty(cliente.nombres) ? "C" : cliente.nombres.Substring(0, 1).ToUpper())
+                                        </div>
+                                        <div>
+                                            <div class="fw-bold text-dark">@cliente.nombres @cliente.apellidos</div>
+                                        </div>
+                                    </div>
+                                </td>
+                                <td>
+                                    <span class="badge bg-light text-dark border fw-normal">
+                                        <i class="bi bi-telephone me-1 text-primary"></i>@cliente.telefono
+                                    </span>
+                                </td>
+                                <td>
+                                    <span class="text-secondary small">
+                                        <i class="bi bi-geo-alt me-1 text-danger"></i>@cliente.direccion
+                                    </span>
+                                </td>
+                                <td>
+                                    <span class="text-muted small">
+                                        <i class="bi bi-calendar3 me-1"></i>@cliente.fecha_nacimiento?.ToString("dd/MM/yyyy")
+                                    </span>
+                                </td>
+                                <td class="text-end pe-4">
+                                    <div class="btn-group btn-group-sm shadow-sm rounded-2 overflow-hidden">
+                                        <button class="btn btn-light border-end text-primary" @onclick="() => AbrirModalEditar(cliente)" title="Editar">
+                                            <i class="bi bi-pencil-fill me-1"></i>Editar
+                                        </button>
+                                        <button class="btn btn-light text-danger" @onclick="() => AbrirModalEliminar(cliente)" title="Eliminar">
+                                            <i class="bi bi-trash-fill me-1"></i>Eliminar
+                                        </button>
+                                    </div>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        }
+    </div>
+</div>
+
+<!-- Modal Formulario (Crear / Editar) -->
+<div class="modal fade" id="modalCliente" tabindex="-1" aria-hidden="true" data-bs-backdrop="static">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg rounded-4">
+            <EditForm Model="clienteActual" OnValidSubmit="GuardarCliente" FormName="formCliente">
+                <DataAnnotationsValidator />
+                <div class="modal-header bg-primary text-white p-4 rounded-top-4">
+                    <h5 class="modal-title fw-bold">
+                        <i class="bi @(esEdicion ? "bi-pencil-square" : "bi-person-plus-fill") me-2"></i>
+                        @(esEdicion ? "Modificar Cliente" : "Agregar Nuevo Cliente")
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body p-4">
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold small text-secondary">CUI</label>
+                            <InputText class="form-control rounded-3" @bind-Value="clienteActual.cui" placeholder="Ingrese CUI" />
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold small text-secondary">NIT</label>
+                            <InputText class="form-control rounded-3" @bind-Value="clienteActual.nit" placeholder="Ingrese NIT" />
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold small text-secondary">Nombres</label>
+                            <InputText class="form-control rounded-3" @bind-Value="clienteActual.nombres" placeholder="Ingrese Nombres" />
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold small text-secondary">Apellidos</label>
+                            <InputText class="form-control rounded-3" @bind-Value="clienteActual.apellidos" placeholder="Ingrese Apellidos" />
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold small text-secondary">Teléfono</label>
+                            <InputText class="form-control rounded-3" @bind-Value="clienteActual.telefono" placeholder="Ej: 55554444" />
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold small text-secondary">Fecha de Nacimiento</label>
+                            <InputDate class="form-control rounded-3" @bind-Value="clienteActual.fecha_nacimiento" />
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label fw-semibold small text-secondary">Dirección</label>
+                            <InputText class="form-control rounded-3" @bind-Value="clienteActual.direccion" placeholder="Dirección residencia" />
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer bg-light p-3 rounded-bottom-4">
+                    <button type="button" class="btn btn-light rounded-3 px-4" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-primary rounded-3 px-4 fw-semibold">
+                        <i class="bi bi-check-circle-fill me-1"></i>
+                        @(esEdicion ? "Guardar Cambios" : "Crear Cliente")
+                    </button>
+                </div>
+            </EditForm>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Eliminar -->
+<div class="modal fade" id="modalEliminar" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg rounded-4">
+            <div class="modal-header bg-danger text-white p-4 rounded-top-4">
+                <h5 class="modal-title fw-bold"><i class="bi bi-exclamation-triangle-fill me-2"></i>Confirmar Eliminación</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body p-4 text-center">
+                <i class="bi bi-trash text-danger display-4 mb-3 d-block"></i>
+                <p class="mb-1 text-secondary">¿Estás seguro de que deseas eliminar a este cliente?</p>
+                <h5 class="fw-bold text-dark mb-0">@clienteActual.nombres @clienteActual.apellidos</h5>
+            </div>
+            <div class="modal-footer bg-light p-3 rounded-bottom-4 justify-content-center">
+                <button type="button" class="btn btn-light rounded-3 px-4" data-bs-dismiss="modal">Cancelar</button>
+                <button type="button" class="btn btn-danger rounded-3 px-4 fw-semibold" @onclick="ConfirmarEliminar">
+                    <i class="bi bi-trash-fill me-1"></i>Eliminar Definitivamente
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    private List<Cliente>? clientes;
+    private Cliente clienteActual = new();
+    private bool esEdicion = false;
+    private string criterioBusqueda = string.Empty;
+
+    // Propiedad calculada para el filtrado dinámico
+    private IEnumerable<Cliente> ClientesFiltrados =>
+        string.IsNullOrWhiteSpace(criterioBusqueda)
+            ? (clientes ?? Enumerable.Empty<Cliente>())
+            : (clientes ?? Enumerable.Empty<Cliente>()).Where(c =>
+                (!string.IsNullOrEmpty(c.nombres) && c.nombres.Contains(criterioBusqueda, StringComparison.OrdinalIgnoreCase)) ||
+                (!string.IsNullOrEmpty(c.apellidos) && c.apellidos.Contains(criterioBusqueda, StringComparison.OrdinalIgnoreCase)) ||
+                (!string.IsNullOrEmpty(c.cui) && c.cui.Contains(criterioBusqueda, StringComparison.OrdinalIgnoreCase)) ||
+                (!string.IsNullOrEmpty(c.nit) && c.nit.Contains(criterioBusqueda, StringComparison.OrdinalIgnoreCase))
+            );
+
+    protected override async Task OnInitializedAsync()
+    {
+        await CargarClientes();
+    }
+
+    private async Task CargarClientes()
+    {
+        try
+        {
+            clientes = await ClienteService.GetClientesAsync();
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error al consultar API: {ex.Message}");
+            clientes = new List<Cliente>();
+        }
+    }
+
+    private async Task AbrirModalCrear()
+    {
+        clienteActual = new Cliente { fecha_nacimiento = DateTime.Today };
+        esEdicion = false;
+        await JS.InvokeVoidAsync("bootstrapModal.show", "modalCliente");
+    }
+
+    private async Task AbrirModalEditar(Cliente cliente)
+    {
+        clienteActual = new Cliente
+        {
+            Id_cliente = cliente.Id_cliente,
+            cui = cliente.cui,
+            nit = cliente.nit,
+            nombres = cliente.nombres,
+            apellidos = cliente.apellidos,
+            direccion = cliente.direccion,
+            telefono = cliente.telefono,
+            fecha_nacimiento = cliente.fecha_nacimiento
+        };
+        esEdicion = true;
+        await JS.InvokeVoidAsync("bootstrapModal.show", "modalCliente");
+    }
+
+    private async Task AbrirModalEliminar(Cliente cliente)
+    {
+        clienteActual = cliente;
+        await JS.InvokeVoidAsync("bootstrapModal.show", "modalEliminar");
+    }
+
+    private async Task GuardarCliente()
+    {
+        try
+        {
+            bool exito = esEdicion 
+                ? await ClienteService.UpdateClienteAsync(clienteActual) 
+                : await ClienteService.CreateClienteAsync(clienteActual);
+
+            if (exito)
+            {
+                await JS.InvokeVoidAsync("bootstrapModal.hide", "modalCliente");
+                await CargarClientes();
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error al guardar: {ex.Message}");
+        }
+    }
+
+    private async Task ConfirmarEliminar()
+    {
+        try
+        {
+            var exito = await ClienteService.DeleteClienteAsync(clienteActual.Id_cliente);
+            if (exito)
+            {
+                await JS.InvokeVoidAsync("bootstrapModal.hide", "modalEliminar");
+                await CargarClientes();
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error al eliminar: {ex.Message}");
+        }
+    }
+}

@@ -1,0 +1,18 @@
+﻿@inherits LayoutComponentBase
+
+<div class="page d-flex min-vh-100">
+    <div class="sidebar bg-dark text-white" style="width: 250px; min-width: 250px;">
+        <NavMenu />
+    </div>
+
+    <main class="flex-grow-1 bg-light">
+        <article class="content px-4 py-3">
+            @Body
+        </article>
+    </main>
+</div>
+
+<div id="blazor-error-ui" class="alert alert-warning alert-dismissible fade show position-fixed bottom-0 start-0 m-3 shadow" style="display: none; z-index: 9999;" role="alert">
+    Ha ocurrido un error no controlado. <a href="" class="reload alert-link">Recargar</a>
+    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+</div>
