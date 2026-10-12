@@ -3,22 +3,18 @@ using WebEmpresa.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Add services to the container.
 builder.Services.AddRazorComponents()
-    .AddInteractiveServerComponents(); // O .AddInteractiveWebAssemblyComponents() según tu plantilla
+    .AddInteractiveServerComponents();
 
-// 1. Configurar HttpClient hacia tu ApiEmpresaV2
 builder.Services.AddScoped(sp => new HttpClient
 {
-    BaseAddress = new Uri("https://localhost:7231/") // Revisa el puerto real de tu API
+    BaseAddress = new Uri("https://localhost:7231/") 
 });
 
-// 2. Registrar el servicio de Clientes
 builder.Services.AddScoped<ClienteService>();
 
 var app = builder.Build();
 
-// Configure the HTTP request pipeline.
 if (!app.Environment.IsDevelopment())
 {
     app.UseExceptionHandler("/Error", createScopeForErrors: true);
@@ -26,11 +22,31 @@ if (!app.Environment.IsDevelopment())
 }
 
 app.UseHttpsRedirection();
+
+// SOLUCIÓN DEFINITIVA DE CABECERAS Y CSP PARA ZAP (Debe ir antes de StaticFiles)
+app.Use(async (context, next) =>
+{
+    context.Response.Headers["X-Content-Type-Options"] = "nosniff";
+    context.Response.Headers["X-Frame-Options"] = "DENY";
+    context.Response.Headers["X-XSS-Protection"] = "1; mode=block";
+    context.Response.Headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains";
+    
+    // Política Content Security Policy (CSP) robusta con respaldos y directivas requeridas
+    context.Response.Headers["Content-Security-Policy"] = 
+        "default-src 'self'; " +
+        "script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; " +
+        "style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://fonts.googleapis.com; " +
+        "font-src 'self' https://cdn.jsdelivr.net https://fonts.gstatic.com; " +
+        "img-src 'self' data:; " +
+        "connect-src 'self' https://localhost:7231;";
+
+    await next();
+});
+
 app.UseStaticFiles();
 app.UseAntiforgery();
 
 app.MapRazorComponents<App>()
     .AddInteractiveServerRenderMode();
 
-// 3. Iniciar la aplicación (Línea indispensable para evitar que 'Exited' ocurra al instante)
 app.Run();
